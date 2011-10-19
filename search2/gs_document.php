@@ -88,6 +88,18 @@ class gs_document {
    */
   private $courseid;
 
+  /**
+   * Path to the external file with the document;
+   * @var string
+   */
+  private $filepath;
+  
+  /**
+   * Mime type of the external file.
+   * @var string
+   */
+  private $mime;
+  
   public function get_type() {
     return $this->type;
   }
@@ -104,7 +116,7 @@ class gs_document {
     $this->contextlink = $contextlink;
     //by default direct & context links are the same
     if(!$this->directlink) {
-      $this->directlink = $directlink;
+      $this->directlink = $contextlink;
     }
   }
 
@@ -189,4 +201,23 @@ class gs_document {
   public function set_courseid($courseid) {
     $this->courseid = $courseid;
   }
+  public function get_filepath() {
+    return $this->filepath;
+  }
+
+  public function set_filepath($filepath) {
+    if(!is_readable($filename)) {
+      throw new gs_exception("Can't read file: '$filename'");
+    }
+    $this->filepath = $filepath;
+  }
+
+  public function get_mime() {
+    return $this->mime;
+  }
+
+  public function set_mime($mime) {
+    $this->mime = $mime;
+  }
+  
 }
