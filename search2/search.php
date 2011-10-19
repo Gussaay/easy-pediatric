@@ -1,0 +1,36 @@
+<?php
+/* @var $DB mysqli_native_moodle_database */
+/* @var $OUTPUT core_renderer */
+/* @var $PAGE moodle_page */
+?>
+<?php
+
+require_once('../config.php');
+ini_set('include_path', $CFG->dirroot . DIRECTORY_SEPARATOR . 'search2' . PATH_SEPARATOR . ini_get('include_path'));
+require_once($CFG->dirroot . '/search/lib.php');
+require_once($CFG->dirroot . '/mod/forum/lib.php');
+require_once($CFG->dirroot . '/search2/Zend/Search/Lucene.php');
+
+require_login();
+$PAGE->set_context(get_system_context());
+
+
+@set_time_limit(0);
+
+Zend_Search_Lucene_Analysis_Analyzer::setDefault(new Zend_Search_Lucene_Analysis_Analyzer_Common_Utf8_CaseInsensitive());
+$index = new Zend_Search_Lucene(SEARCH_INDEX_PATH);
+$hits = $index->find('admin');
+
+//filter out non-accessible records (security)
+//put search results into session cache
+//display search results
+foreach ($hits as $hit) {
+  include('_result.php');
+}
+
+//display pager
+$baseurl = new moodle_url('search.php');
+$count = count($hits);
+$page = 0;
+$perpage = 20;
+echo $OUTPUT->paging_bar($count, $page, $perpage, $baseurl);
