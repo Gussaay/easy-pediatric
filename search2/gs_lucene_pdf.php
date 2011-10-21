@@ -5,15 +5,34 @@
  *
  * @author Tomasz Muras
  */
-class gs_lucene_pdf extends Zend_Search_Lucene_Document {
+class gs_lucene_pdf extends Zend_Search_Lucene_Document_Pptx {
 
   /** @var $doc gs_document */
   public $doc;
   public static $enabled = NULL;
+  public static $path = NULL;
 
   public function __construct(gs_document $doc) {
     $this->doc = $doc;
     gs_fill_lucene_fields($this);
+    $this->addField(Zend_Search_Lucene_Field::UnStored('content', $this->convert($doc->get_filepath())));
+  }
+
+  /**
+   * Convert PDF document to text
+   * @param string $path 
+   */
+  public function convert($file) {
+    $file = escapeshellarg($file);
+    $cmd = escapeshellcmd(self::$path) .' '. $file .' -';
+    $ret = NULL;
+    $output = NULL;
+    $result = exec($cmd, $output, $ret);
+    if($ret != 0) {
+      mtrace("PDF text extraction failed, command (return status): $cmd ($ret)");
+      return '';
+    }
+    return implode(' ', $output);
   }
 
   /**
@@ -52,8 +71,9 @@ class gs_lucene_pdf extends Zend_Search_Lucene_Document {
       self::$enabled = false;
       return false;
     }
-    mtrace("pdftotext enabled, using '$path'");
+    self::$path = $path;
     self::$enabled = true;
+    mtrace('pdftotext enabled, using ' . self::$path ."'");
     return true;
   }
 

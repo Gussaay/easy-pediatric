@@ -13,7 +13,6 @@ require_once($CFG->dirroot . '/search2/lib.php');
 
 require_login();
 $PAGE->set_context(get_system_context());
-gs_lucene_pdf::is_enabled();
 
 @set_time_limit(0);
 echo '<pre>';
@@ -33,14 +32,14 @@ $recordset = gs_forum_iterator();
 foreach ($recordset as $record) {
   //var_dump($record);
   $documents = gs_forum_get_documents($record->id);
-  var_dump($documents);
+  //var_dump($documents);
   foreach ($documents as $document) {
     switch ($document->get_type()) {
       case GS_TYPE_HTML:
         $lucenedoc = new gs_lucene_html($document);
         break;
       case GS_TYPE_FILE:
-        
+        $lucenedoc = gs_document_for_mime($document);
         break;
       default:
         throw new gs_exception("Wrong document type");
@@ -49,7 +48,6 @@ foreach ($recordset as $record) {
     $index->addDocument($lucenedoc);
   }
 }
-die();
 $index->commit();
 
 //var_dump($recordset);
@@ -94,12 +92,13 @@ function gs_forum_get_documents($postid) {
   //files
   $fs = get_file_storage();
   $files = $fs->get_area_files($context->id, 'mod_forum', 'attachment', $postid, "timemodified", false);
-
+  //if($files) {  echo '<pre>'; var_dump($files); die();  }
   foreach ($files as $file) {
     /* @var $file stored_file  */
     $filename = $file->get_filename();
     $path = $file->get_content_file_location();
     $url = file_encode_url('/pluginfile.php', '/' . $context->id . '/mod_forum/attachment/' . $postid . '/' . $filename);
+
     $document = clone $document;
     $document->set_directlink($url);
     $document->set_type(GS_TYPE_FILE);
@@ -126,12 +125,18 @@ function forum_get_post_full2($postid) {
 }
 
 function gs_document_for_mime(gs_document $doc) {
-  switch($doc->get_mime()) {
+  switch ($doc->get_mime()) {
     case 'application/pdf':
-      return new gs_lucene_pdf($doc);
-      
+      if (gs_lucene_pdf::is_enabled()) {
+        return new gs_lucene_pdf($doc);
+      }
+      else {
+        return null;
+      }
+    case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+      return new gs_lucene_pptx($doc);
     default:
-      mtrace("Mime type '".$doc->get_mime()."not supported");
+      mtrace("Mime type '" . $doc->get_mime() . "not supported");
       return null;
   }
 }

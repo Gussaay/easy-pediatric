@@ -13,12 +13,13 @@ require_once($CFG->dirroot . '/search2/lib.php');
 require_login();
 $PAGE->set_context(get_system_context());
 
+$q = required_param('q', PARAM_TEXT);
 
 @set_time_limit(0);
 
 Zend_Search_Lucene_Analysis_Analyzer::setDefault(new Zend_Search_Lucene_Analysis_Analyzer_Common_Utf8_CaseInsensitive());
 $index = new Zend_Search_Lucene(GS_INDEX_PATH);
-$hits = $index->find('admin');
+$hits = $index->find($q);
 
 //filter out non-accessible records (security)
 //put search results into session cache

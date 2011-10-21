@@ -206,8 +206,8 @@ class gs_document {
   }
 
   public function set_filepath($filepath) {
-    if(!is_readable($filename)) {
-      throw new gs_exception("Can't read file: '$filename'");
+    if(!is_readable($filepath)) {
+      throw new gs_exception("Can't read file: '$filepath'");
     }
     $this->filepath = $filepath;
   }
