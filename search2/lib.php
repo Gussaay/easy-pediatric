@@ -5,6 +5,8 @@ require_once($CFG->dirroot . '/search2/gs_document.php');
 require_once($CFG->dirroot . '/search2/gs_lucene_html.php');
 require_once($CFG->dirroot . '/search2/gs_lucene_pdf.php');
 require_once($CFG->dirroot . '/search2/gs_lucene_pptx.php');
+require_once($CFG->dirroot . '/search2/mod/forum.php');
+
 
 define('GS_INDEX_PATH', $CFG->dataroot . '/search');
 define('GS_TYPE_TEXT', 0);

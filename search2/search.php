@@ -22,6 +22,15 @@ $index = new Zend_Search_Lucene(GS_INDEX_PATH);
 $hits = $index->find($q);
 
 //filter out non-accessible records (security)
+$countbefore = count($hits);
+foreach ($hits as $k=>$hit) {
+  $func = 'gs_'.$hit->module.'_access';
+  if(!$func($hit->setid)) {
+    unset($hits[$k]);
+  }
+}
+$countafter = count($hits);
+mtrace($countbefore - $countafter.' hits removed as non-accessible for current user');
 //put search results into session cache
 //display search results
 foreach ($hits as $hit) {

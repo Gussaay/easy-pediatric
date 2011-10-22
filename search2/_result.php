@@ -9,7 +9,7 @@
 <b>Created:</b> <?php echo userdate($hit->created) ?> <br/>
 <b>Modified:</b> <?php echo userdate($hit->modified) ?> <br/>
 <b>Course:</b> <?php echo $hit->courseid ?> <br/>
-<b>Document:</b> <?php echo  $hit->module . ':' . $hit->setid ?> <br/>
+<b>Document:</b> <?php echo $hit->module . ':' . $hit->setid ?> <br/>
 <b>Direct link:</b> <?php echo $hit->directlink ?> <br/>
 <b>Context link:</b> <?php echo $hit->contextlink ?> <br/>
 <?php $OUTPUT->box_end(); ?>
