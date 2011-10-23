@@ -73,7 +73,7 @@ class gs_lucene_pdf extends Zend_Search_Lucene_Document_Pptx {
     }
     self::$path = $path;
     self::$enabled = true;
-    mtrace('pdftotext enabled, using ' . self::$path ."'");
+    mtrace('pdftotext enabled, using \'' . self::$path ."'");
     return true;
   }
 

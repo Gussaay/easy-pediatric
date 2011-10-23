@@ -24,13 +24,13 @@ $hits = $index->find($q);
 //filter out non-accessible records (security)
 $countbefore = count($hits);
 foreach ($hits as $k=>$hit) {
-  $func = 'gs_'.$hit->module.'_access';
+  $func = $hit->module.'_gs_access';
   if(!$func($hit->setid)) {
     unset($hits[$k]);
   }
 }
 $countafter = count($hits);
-mtrace($countbefore - $countafter.' hits removed as non-accessible for current user');
+mtrace($countbefore - $countafter.' hits removed as non-accessible for current user','<br />');
 //put search results into session cache
 //display search results
 foreach ($hits as $hit) {

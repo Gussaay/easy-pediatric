@@ -1,15 +1,21 @@
 <?php
 
+/* @var $DB mysqli_native_moodle_database */
+/* @var $OUTPUT core_renderer */
+/* @var $PAGE moodle_page */
+?>
+<?php
+
 //mdl_forum_discussions
-function gs_forum_iterator($from = 0) {
+function forum_gs_iterator($from = 0) {
   global $DB;
 
-  $sql = "SELECT id FROM {forum_posts} WHERE modified > ?";
+  $sql = "SELECT id, modified FROM {forum_posts} WHERE modified > ? ORDER BY modified ASC";
 
   return $DB->get_recordset_sql($sql, array($from));
 }
 
-function gs_forum_get_documents($postid) {
+function forum_gs_get_documents($postid) {
   global $CFG, $DB;
 
   //return array of indexable documents: post and attachment
@@ -61,8 +67,8 @@ function gs_forum_get_documents($postid) {
  *
  * @param integer $id as returned by gs_forum_iterator()
  */
-function gs_forum_access($id) {
-  global $DB,$USER;
+function forum_gs_access($id) {
+  global $DB, $USER;
   $post = $DB->get_record('forum_posts', array('id' => $id), '*', MUST_EXIST);
   $discussion = $DB->get_record('forum_discussions', array('id' => $post->discussion), '*', MUST_EXIST);
   $forum = $DB->get_record('forum', array('id' => $discussion->forum), '*', MUST_EXIST);
