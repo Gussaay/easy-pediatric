@@ -32,6 +32,8 @@ if ($hassiteconfig) { // speedup for non-admins, add all caps used on this page
     $temp->add(new admin_setting_configcheckbox('debugpageinfo', new lang_string('debugpageinfo', 'admin'), new lang_string('configdebugpageinfo', 'admin'), 0));
     $ADMIN->add('development', $temp);
 
+    $ADMIN->add('experimental', new admin_externalpage('globalsearch', 'Global Search', "$CFG->wwwroot/search2/admin.php"));
+    
     // "profiling" settingpage (conditionally if the 'xhprof' extension is available only)
     if (extension_loaded('xhprof') && function_exists('xhprof_enable')) {
         $temp = new admin_settingpage('profiling', new lang_string('profiling', 'admin'));

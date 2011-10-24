@@ -6,7 +6,7 @@
 ?>
 <?php
 
-require_once($CFG->dirroot . '/search2/Zend/Search/Lucene.php');
+require_once('Zend/Search/Lucene.php');
 require_once($CFG->dirroot . '/search2/gs_document.php');
 require_once($CFG->dirroot . '/search2/gs_lucene_html.php');
 require_once($CFG->dirroot . '/search2/gs_lucene_pdf.php');
@@ -56,7 +56,7 @@ function gs_document_for_mime(gs_document $doc) {
     case 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
       return new gs_lucene_pptx($doc);
     default:
-      mtrace("Mime type '" . $doc->get_mime() . " not supported",'<br />');
+      mtrace("Mime type '" . $doc->get_mime() . " not supported", '<br />');
       return null;
   }
 }
@@ -94,19 +94,155 @@ function gs_get_iterators() {
 /**
  * Reset all search data
  */
-function gs_reset() {
+function gs_reset_index() {
   global $DB;
-  
+
   //delete index
   if ($handle = opendir(GS_INDEX_PATH)) {
     while (false !== ($file = readdir($handle))) {
       if ($file != "." && $file != "..") {
-        @unlink($file);
+        unlink(GS_INDEX_PATH . DIRECTORY_SEPARATOR . $file);
       }
     }
     closedir($handle);
   }
-  
+
   //delete database information
-  $DB->delete_records('config_plugins', array('plugin'=>'gs'));
+  $DB->delete_records('config_plugins', array('plugin' => 'gs'));
+}
+
+/**
+ * Merge separate index segments into one.
+ */
+function gs_optimize_index() {
+  $index = gs_get_index();
+  $index->optimize();
+}
+
+/**
+ * Return configuration and stats for GS.
+ */
+function gs_get_config($mods) {
+  $all = get_config('gs');
+  $configvars = array('indexingstart', 'indexingend', 'lastrun', 'docsignored', 'docsprocessed', 'recordsprocessed');
+
+  $ret = array();
+  foreach ($mods as $mod) {
+    $ret[$mod] = new stdClass();
+    foreach ($configvars as $var) {
+      $method = "{$mod}_$var";
+      if (empty($all->$method)) {
+        $ret[$mod]->$var = 0;
+      }
+      else {
+        $ret[$mod]->$var = $all->$method;
+      }
+    }
+    if (empty($ret[$mod]->lastrun)) {
+      $ret[$mod]->lastrun = "never";
+    }
+    else {
+      $ret[$mod]->lastrun = userdate($ret[$mod]->lastrun);
+    }
+    if (empty($ret[$mod]->timetaken)) {
+      $ret[$mod]->timetaken = 0;
+    }
+    else {
+      $ret[$mod]->timetaken = $ret[$mod]->indexingend - $ret[$mod]->indexingstart;
+    }
+  }
+  return $ret;
+}
+
+/**
+ * Check if the index file is OK.
+ */
+function gs_index_check() {
+  if (!file_exists(GS_INDEX_PATH)) {
+    if (!mkdir(GS_INDEX_PATH, $CFG->directorypermissions)) {
+      error("Error creating data directory at: '" . GS_INDEX_PATH . "'.");
+    }
+  }
+  //allow for symlinking
+  if (!is_dir(GS_INDEX_PATH)) {
+    error("Index path '" . GS_INDEX_PATH . "' is not a directory");
+  }
+  $index = gs_get_index();
+}
+
+/**
+ * Get Lucene Index
+ * @return Zend_Search_Lucene 
+ */
+function gs_get_index() {
+  Zend_Search_Lucene_Analysis_Analyzer::setDefault(new Zend_Search_Lucene_Analysis_Analyzer_Common_Utf8_CaseInsensitive());
+  try {
+    $index = new Zend_Search_Lucene(GS_INDEX_PATH, false);
+  } catch (Zend_Search_Lucene_Exception $ex) {
+    $index = new Zend_Search_Lucene(GS_INDEX_PATH, true);
+  }
+
+  return $index;
+}
+
+/**
+ * Index all documents.
+ */
+function gs_index() {
+  $index = gs_get_index();
+  $iterators = gs_get_iterators();
+  foreach ($iterators as $name => $iterator) {
+    mtrace('Processing module ' . $iterator->module);
+    $indexingstart = time();
+    $iterfunction = $iterator->iterator;
+    $getdocsfunction = $iterator->documents;
+    //get the timestamp of the last commited run for the plugin
+    $lastrun = get_config('gs', $name . '_last_run');
+    $recordset = $iterfunction($lastrun);
+    $norecords = 0;
+    $nodocuments = 0;
+    $nodocumentsignored = 0;
+    foreach ($recordset as $record) {
+      ++$norecords;
+      //var_dump($record);
+      $documents = $getdocsfunction($record->id);
+      //@TODO find out if it's not an update - delete whole document set if so
+      foreach ($documents as $document) {
+        switch ($document->get_type()) {
+          case GS_TYPE_HTML:
+            $lucenedoc = new gs_lucene_html($document);
+            break;
+          case GS_TYPE_FILE:
+            $lucenedoc = gs_document_for_mime($document);
+            break;
+          default:
+            throw new gs_exception("Wrong document type");
+        }
+        if ($lucenedoc) {
+          $index->addDocument($lucenedoc);
+          ++$nodocuments;
+        }
+        else {
+          ++$nodocumentsignored;
+        }
+        if ($nodocuments % 20000) {
+          $index->commit();
+          set_config($name . '_lastrun', $record->modified, 'gs');
+        }
+      }
+    }
+    $recordset->close();
+    if ($norecords > 0) {
+      $index->commit();
+      $indexingend = time();
+      //mark the timestamp of the last document commited
+      set_config($name . '_indexingstart', $indexingstart, 'gs');
+      set_config($name . '_indexingend', $indexingend, 'gs');
+      set_config($name . '_lastrun', $record->modified, 'gs');
+      set_config($name . '_docsignored', $nodocumentsignored, 'gs');
+      set_config($name . '_docsprocessed', $nodocuments, 'gs');
+      set_config($name . '_recordsprocessed', $norecords, 'gs');
+      mtrace("Processed $norecords records containing $nodocuments documents for " . $iterator->module);
+    }
+  }
 }

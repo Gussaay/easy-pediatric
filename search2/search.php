@@ -6,19 +6,32 @@
 <?php
 
 require_once('../config.php');
-ini_set('include_path', $CFG->dirroot . DIRECTORY_SEPARATOR . 'search2' . PATH_SEPARATOR . ini_get('include_path'));
+//ini_set('include_path', $CFG->dirroot . DIRECTORY_SEPARATOR . 'search2' . PATH_SEPARATOR . ini_get('include_path'));
 require_once($CFG->dirroot . '/mod/forum/lib.php');
+require_once($CFG->libdir . '/formslib.php');
 require_once($CFG->dirroot . '/search2/lib.php');
 
 require_login();
+class gs_search_form extends moodleform {
+
+  function definition() {
+
+    $mform = & $this->_form;
+    $objs = array();
+    $objs[] = $mform->createElement('submit', 'optimize', 'Optimize');
+    $objs[] = $mform->createElement('submit', 'reset', 'Clear index');
+    $objs[] = $mform->createElement('submit', 'index', 'Run indexer');
+    $mform->addElement('group', 'controlgroup', '', $objs, ' ', false);
+  }
+
+}
+
+
 $PAGE->set_context(get_system_context());
 
 $q = required_param('q', PARAM_TEXT);
 
-@set_time_limit(0);
-
-Zend_Search_Lucene_Analysis_Analyzer::setDefault(new Zend_Search_Lucene_Analysis_Analyzer_Common_Utf8_CaseInsensitive());
-$index = new Zend_Search_Lucene(GS_INDEX_PATH);
+$index = gs_get_index();
 $hits = $index->find($q);
 
 //filter out non-accessible records (security)
