@@ -64,37 +64,42 @@ function forum_gs_get_documents($postid) {
 }
 
 /**
- *
+ * Is document set $id accessible for current user?
  * @param integer $id as returned by gs_forum_iterator()
  */
 function forum_gs_access($id) {
   global $DB, $USER;
-  $post = $DB->get_record('forum_posts', array('id' => $id), '*', MUST_EXIST);
-  $discussion = $DB->get_record('forum_discussions', array('id' => $post->discussion), '*', MUST_EXIST);
-  $forum = $DB->get_record('forum', array('id' => $discussion->forum), '*', MUST_EXIST);
-  $course = $DB->get_record('course', array('id' => $forum->course), '*', MUST_EXIST);
-  $cm = get_coursemodule_from_instance('forum', $forum->id, $course->id, false, MUST_EXIST);
+
+  try {
+    $post = $DB->get_record('forum_posts', array('id' => $id), '*', MUST_EXIST);
+    $discussion = $DB->get_record('forum_discussions', array('id' => $post->discussion), '*', MUST_EXIST);
+    $forum = $DB->get_record('forum', array('id' => $discussion->forum), '*', MUST_EXIST);
+    $course = $DB->get_record('course', array('id' => $forum->course), '*', MUST_EXIST);
+    $cm = get_coursemodule_from_instance('forum', $forum->id, $course->id, false, MUST_EXIST);
+  } catch (dml_missing_record_exception $ex) {
+    return GS_ACCESS_DELETED;
+  }
   $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 
 // Make sure groups allow this user to see the item they're rating
   if ($discussion->groupid > 0 and $groupmode = groups_get_activity_groupmode($cm, $course)) {   // Groups are being used
     if (!groups_group_exists($discussion->groupid)) { // Can't find group
-      return false;
+      return GS_ACCESS_DENIED;
     }
 
     if (!groups_is_member($discussion->groupid) and !has_capability('moodle/site:accessallgroups', $context)) {
       // do not allow viewing of posts from other groups when in SEPARATEGROUPS or VISIBLEGROUPS
-      return false;
+      return GS_ACCESS_DENIED;
     }
   }
 
   // perform some final capability checks
   if (!forum_user_can_see_post($forum, $discussion, $post, $USER, $cm)) {
-    return false;
+    return GS_ACCESS_DENIED;
   }
 
 //forum_user_can_view_post($post, $course, $cm, $forum, $discussion)  
-  return true;
+  return GS_ACCESS_GRANTED;
 }
 
 function forum_get_post_full2($postid) {

@@ -21,6 +21,10 @@ define('GS_TYPE_TEXT', 0);
 define('GS_TYPE_FILE', 1);
 define('GS_TYPE_HTML', 2);
 
+define('GS_ACCESS_DENIED', 0);
+define('GS_ACCESS_GRANTED', 1);
+define('GS_ACCESS_DELETED', 2);
+
 class gs_exception extends moodle_exception {
 
   function __construct($hint, $debuginfo=null) {
@@ -39,6 +43,8 @@ function gs_fill_lucene_fields($document) {
   $document->addField(Zend_Search_Lucene_Field::Keyword('module', $document->doc->get_module()));
   $document->addField(Zend_Search_Lucene_Field::Keyword('directlink', $document->doc->get_directlink()));
   $document->addField(Zend_Search_Lucene_Field::Keyword('contextlink', $document->doc->get_contextlink()));
+  $document->addField(Zend_Search_Lucene_Field::Keyword('fullsetid',
+          $document->doc->get_module() . ':' . $document->doc->get_id()));
   if ($document->doc->get_type() !== GS_TYPE_FILE) {
     $document->addField(Zend_Search_Lucene_Field::UnStored('content', $document->doc->get_content()));
   }
@@ -175,12 +181,15 @@ function gs_index_check() {
  * @return Zend_Search_Lucene 
  */
 function gs_get_index() {
+//  static $index;
+//  if ($index === null) {
   Zend_Search_Lucene_Analysis_Analyzer::setDefault(new Zend_Search_Lucene_Analysis_Analyzer_Common_Utf8_CaseInsensitive());
   try {
     $index = new Zend_Search_Lucene(GS_INDEX_PATH, false);
   } catch (Zend_Search_Lucene_Exception $ex) {
     $index = new Zend_Search_Lucene(GS_INDEX_PATH, true);
   }
+  //}
 
   return $index;
 }
@@ -192,21 +201,23 @@ function gs_index() {
   $index = gs_get_index();
   $iterators = gs_get_iterators();
   foreach ($iterators as $name => $iterator) {
-    mtrace('Processing module ' . $iterator->module);
+    mtrace('Processing module ' . $iterator->module, '<br />');
     $indexingstart = time();
     $iterfunction = $iterator->iterator;
     $getdocsfunction = $iterator->documents;
     //get the timestamp of the last commited run for the plugin
-    $lastrun = get_config('gs', $name . '_last_run');
+    $lastrun = get_config('gs', $name . '_lastrun');
     $recordset = $iterfunction($lastrun);
     $norecords = 0;
     $nodocuments = 0;
     $nodocumentsignored = 0;
     foreach ($recordset as $record) {
+      mtrace("$name,{$record->id}", '<br/>');
       ++$norecords;
       //var_dump($record);
       $documents = $getdocsfunction($record->id);
-      //@TODO find out if it's not an update - delete whole document set if so
+      //find out if it's not an update - delete whole document set if so
+      gs_remove_set($name, $record->id);
       foreach ($documents as $document) {
         switch ($document->get_type()) {
           case GS_TYPE_HTML:
@@ -245,4 +256,24 @@ function gs_index() {
       mtrace("Processed $norecords records containing $nodocuments documents for " . $iterator->module);
     }
   }
+}
+
+/**
+ * Remove all documents from index for $module and set $id.
+ * @param type $module
+ * @param type $id 
+ */
+function gs_remove_set($module, $id) {
+  mtrace("gs_remove_set($module, $id)", '<br/>');
+  $index = gs_get_index();
+  $q = "fullsetid:\"$module:$id\"";
+  
+  $term = new Zend_Search_Lucene_Index_Term("$module:$id", "fullsetid");
+  $ids  = $index->termDocs($term);
+  //mtrace($q, '<br/>');
+  foreach ($ids as $id) {
+    mtrace("Removing: $id", '<br/>');
+    $index->delete($id);
+  }
+
 }

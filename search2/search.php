@@ -38,8 +38,13 @@ $hits = $index->find($q);
 $countbefore = count($hits);
 foreach ($hits as $k=>$hit) {
   $func = $hit->module.'_gs_access';
-  if(!$func($hit->setid)) {
-    unset($hits[$k]);
+  $result = $func($hit->setid);
+  switch($result) {
+    case GS_ACCESS_DELETED:
+      $index->delete($hit->id);
+    case GS_ACCESS_DENIED:
+      unset($hits[$k]);
+      break;
   }
 }
 $countafter = count($hits);

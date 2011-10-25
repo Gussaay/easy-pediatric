@@ -29,7 +29,7 @@ class gs_lucene_pdf extends Zend_Search_Lucene_Document_Pptx {
     $output = NULL;
     $result = exec($cmd, $output, $ret);
     if($ret != 0) {
-      mtrace("PDF text extraction failed, command (return status): $cmd ($ret)");
+      mtrace("PDF text extraction failed, command (return status): $cmd ($ret)", '<br />');
       return '';
     }
     return implode(' ', $output);
@@ -54,12 +54,12 @@ class gs_lucene_pdf extends Zend_Search_Lucene_Document_Pptx {
       }
     }
     if (!file_exists($path)) {
-      mtrace("Disabling pdftotext conversion because '$path' does not exist.");
+      mtrace("Disabling pdftotext conversion because '$path' does not exist.", '<br />');
       self::$enabled = false;
       return false;
     }
     if (!is_executable($path)) {
-      mtrace("Disabling pdftotext conversion because '$path' is not executable.");
+      mtrace("Disabling pdftotext conversion because '$path' is not executable.", '<br />');
       self::$enabled = false;
       return false;
     }
@@ -67,13 +67,13 @@ class gs_lucene_pdf extends Zend_Search_Lucene_Document_Pptx {
     $retval = null;
     exec("$path -v", $output, $retval);
     if ($retval) {
-      mtrace("Disabling pdftotext conversion because return value for '$path -v' is non-zero ($retval).");
+      mtrace("Disabling pdftotext conversion because return value for '$path -v' is non-zero ($retval).", '<br />');
       self::$enabled = false;
       return false;
     }
     self::$path = $path;
     self::$enabled = true;
-    mtrace('pdftotext enabled, using \'' . self::$path ."'");
+    mtrace('pdftotext enabled, using \'' . self::$path ."'", '<br />');
     return true;
   }
 

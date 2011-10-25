@@ -20,11 +20,13 @@ function glossary_gs_get_documents($id) {
   global $DB;
 
   $documents = array();
+
   $glossary = glossary_get_full($id);
   $course = $DB->get_record('course', array('id' => $glossary->course));
   $cm = get_coursemodule_from_instance('glossary', $glossary->glossaryid, $glossary->course);
   $user = $DB->get_record('user', array('id' => $glossary->userid));
   $context = get_context_instance(CONTEXT_MODULE, $cm->id);
+
 
   /*  var_dump($glossary);
     var_dump($cm);
@@ -68,15 +70,19 @@ function glossary_gs_get_documents($id) {
 
 function glossary_gs_access($id) {
   global $DB;
-  $entry = $DB->get_record('glossary_entries', array('id' => $id));
-  $glossary = $DB->get_record('glossary', array('id' => $entry->glossaryid));
-  $cm = get_coursemodule_from_instance('glossary', $glossary->id, 0, false);
-  $course = $DB->get_record('course', array('id' => $cm->course));
 
+  try {
+    $entry = $DB->get_record('glossary_entries', array('id' => $id), '*', MUST_EXIST);
+    $glossary = $DB->get_record('glossary', array('id' => $entry->glossaryid), '*', MUST_EXIST);
+    $cm = get_coursemodule_from_instance('glossary', $glossary->id, 0, false,MUST_EXIST);
+    $course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
+  } catch (dml_missing_record_exception $ex) {
+    return GS_ACCESS_DELETED;
+  }
   try {
     require_course_login($course, true, $cm, true, true);
   } catch (require_login_exception $ex) {
-    return false;
+    return GS_ACCESS_DENIED;
   }
   $entry->glossaryname = $glossary->name;
   $entry->cmid = $cm->id;
@@ -85,17 +91,17 @@ function glossary_gs_access($id) {
   $modinfo = get_fast_modinfo($course);
   // make sure the entry is visible
   if (empty($modinfo->cms[$entry->cmid]->uservisible)) {
-    return false;
+    return GS_ACCESS_DENIED;
   }
 
   // make sure the entry is approved (or approvable by current user)
   if (!$entry->approved and ($USER->id != $entry->userid)) {
     $context = get_context_instance(CONTEXT_MODULE, $entry->cmid);
     if (!has_capability('mod/glossary:approve', $context)) {
-      return false;
+      return GS_ACCESS_DENIED;
     }
   }
-  return true;
+  return GS_ACCESS_GRANTED;
 }
 
 function glossary_get_full($id) {

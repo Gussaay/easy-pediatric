@@ -28,12 +28,11 @@ function label_gs_get_documents($id) {
   //only 1 timestamp stored for labels
   $document->set_created($label->timemodified);
   $document->set_modified($label->timemodified);
-  
+
   $document->set_title($label->name);
   $document->set_courseid($label->course);
 //format text from whatever format it was stored in to HTML
-  $document->set_content(format_text($label->intro, $label->introformat,
-          array('nocache' => true, 'para' => false)));
+  $document->set_content(format_text($label->intro, $label->introformat, array('nocache' => true, 'para' => false)));
   $document->set_type(GS_TYPE_HTML);
   // /mod/label/view.php?l=NNN (will work better when MDL-29889 is done)
   $document->set_contextlink('/mod/label/view.php?l=' . $label->id);
@@ -46,15 +45,20 @@ function label_gs_get_documents($id) {
 function label_gs_access($id) {
   global $DB;
 
-  $label = $DB->get_record("label", array("id" => $id));
-  $course = $DB->get_record("course", array("id" => $label->course));
-  $cm = get_coursemodule_from_instance("label", $label->id, $course->id);
-  
+  try {
+    $label = $DB->get_record("label", array("id" => $id), '*', MUST_EXIST);
+    $course = $DB->get_record("course", array("id" => $label->course), '*', MUST_EXIST);
+    $cm = get_coursemodule_from_instance("label", $label->id, $course->id, false, MUST_EXIST);
+  } catch (dml_missing_record_exception $ex) {
+    return GS_ACCESS_DELETED;
+  }
+
   try {
     require_course_login($course, true, $cm, true, true);
   } catch (require_login_exception $ex) {
-    return false;
+    return GS_ACCESS_DENIED;
   }
 
-  return true;
+  return GS_ACCESS_GRANTED
+  ;
 }

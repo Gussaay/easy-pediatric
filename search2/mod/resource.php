@@ -63,10 +63,13 @@ function resource_gs_get_documents($id) {
 function resource_gs_access($id) {
   global $DB;
 
-  $resource = $DB->get_record('resource', array('id' => $id));
-  $cm = get_coursemodule_from_instance('resource', $resource->id, $resource->course, false);
-  $course = $DB->get_record('course', array('id' => $cm->course), '*');
-
+  try {
+    $resource = $DB->get_record('resource', array('id' => $id), '*', MUST_EXIST);
+    $cm = get_coursemodule_from_instance('resource', $resource->id, $resource->course, false);
+    $course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
+  } catch (dml_missing_record_exception $ex) {
+    return GS_ACCESS_DELETED;
+  }
   try {
     require_course_login($course, true, $cm, true, true);
     $context = get_context_instance(CONTEXT_MODULE, $cm->id);
