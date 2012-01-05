@@ -8,7 +8,7 @@
 
 require_once('../config.php');
 require_once($CFG->libdir . '/adminlib.php');
-require_once($CFG->dirroot . '/search2/lib.php');
+require_once($CFG->dirroot . '/search/lib.php');
 
 admin_externalpage_setup('globalsearch');
 

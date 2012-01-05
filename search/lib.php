@@ -7,14 +7,14 @@
 <?php
 
 require_once('Zend/Search/Lucene.php');
-require_once($CFG->dirroot . '/search2/gs_document.php');
-require_once($CFG->dirroot . '/search2/gs_lucene_html.php');
-require_once($CFG->dirroot . '/search2/gs_lucene_pdf.php');
-require_once($CFG->dirroot . '/search2/gs_lucene_pptx.php');
-require_once($CFG->dirroot . '/search2/mod/forum.php');
-require_once($CFG->dirroot . '/search2/mod/glossary.php');
-require_once($CFG->dirroot . '/search2/mod/label.php');
-require_once($CFG->dirroot . '/search2/mod/resource.php');
+require_once($CFG->dirroot . '/search/gs_document.php');
+require_once($CFG->dirroot . '/search/gs_lucene_html.php');
+require_once($CFG->dirroot . '/search/gs_lucene_pdf.php');
+require_once($CFG->dirroot . '/search/gs_lucene_pptx.php');
+require_once($CFG->dirroot . '/search/mod/forum.php');
+require_once($CFG->dirroot . '/search/mod/glossary.php');
+require_once($CFG->dirroot . '/search/mod/label.php');
+require_once($CFG->dirroot . '/search/mod/resource.php');
 
 define('GS_INDEX_PATH', $CFG->dataroot . '/search');
 define('GS_TYPE_TEXT', 0);
