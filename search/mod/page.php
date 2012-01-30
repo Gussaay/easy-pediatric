@@ -8,7 +8,7 @@
 
 //based on 
 
-function page_gs_iterator($from = 0) {
+function page_search_iterator($from = 0) {
   global $DB;
 
   $sql = "SELECT id, timemodified AS modified FROM {page} WHERE timemodified > ? ORDER BY timemodified ASC";
@@ -16,7 +16,7 @@ function page_gs_iterator($from = 0) {
   return $DB->get_recordset_sql($sql, array($from));
 }
 
-function page_gs_get_documents($id) {
+function page_search_get_documents($id) {
   global $DB;
 
   $documents = array();
@@ -30,7 +30,7 @@ function page_gs_get_documents($id) {
     var_dump($context);
    */
 
-  $document = new gs_document();
+  $document = new search_document();
   $document->set_id($page->id);
   $document->set_created($page->timecreated);
   $document->set_modified($page->timemodified);
@@ -41,7 +41,7 @@ function page_gs_get_documents($id) {
       format_text($page->intro, $page->introformat, array('nocache' => true, 'para' => false)) . ' ' .
       format_text($page->content, $page->contentformat, array('nocache' => true, 'para' => false))
   );
-  $document->set_type(GS_TYPE_HTML);
+  $document->set_type(SEARCH_TYPE_HTML);
   $document->set_contextlink('/mod/page/view.php?id=' . $page->id);
   $document->set_module('page');
   $documents[] = $document;
@@ -49,7 +49,7 @@ function page_gs_get_documents($id) {
   return $documents;
 }
 
-function page_gs_access($id) {
+function page_search_access($id) {
   global $DB;
   //@TODO - finish
     if (!$page = $DB->get_record('page', array('id'=>$p))) {

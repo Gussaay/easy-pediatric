@@ -7,7 +7,7 @@
 <?php
 
 //based on 
-function resource_gs_iterator($from = 0) {
+function resource_search_iterator($from = 0) {
   global $DB;
 
   $sql = "SELECT id, timemodified AS modified FROM {resource} WHERE timemodified > ? ORDER BY timemodified ASC";
@@ -15,7 +15,7 @@ function resource_gs_iterator($from = 0) {
   return $DB->get_recordset_sql($sql, array($from));
 }
 
-function resource_gs_get_documents($id) {
+function resource_search_get_documents($id) {
   global $DB;
 
   $documents = array();
@@ -24,7 +24,7 @@ function resource_gs_get_documents($id) {
   $cm = get_coursemodule_from_instance('resource', $resource->id, $resource->course);
   $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 
-  $document = new gs_document();
+  $document = new search_document();
   $document->set_id($resource->id);
   $document->set_created($resource->timemodified);
   $document->set_modified($resource->timemodified);
@@ -32,7 +32,7 @@ function resource_gs_get_documents($id) {
   $document->set_courseid($resource->course);
   //format text from whatever format it was stored in to HTML
   $document->set_content(format_text($resource->intro, $resource->introformat, array('nocache' => true, 'para' => false)));
-  $document->set_type(GS_TYPE_HTML);
+  $document->set_type(SEARCH_TYPE_HTML);
   $document->set_contextlink('/mod/resource/view.php?r=' . $resource->id);
   $document->set_module('resource');
   $documents[] = $document;
@@ -52,7 +52,7 @@ function resource_gs_get_documents($id) {
 
   $document = clone $document;
   $document->set_directlink($url);
-  $document->set_type(GS_TYPE_FILE);
+  $document->set_type(SEARCH_TYPE_FILE);
   $document->set_filepath($path);
   $document->set_mime($mimetype);
   $documents[] = $document;
@@ -60,7 +60,7 @@ function resource_gs_get_documents($id) {
   return $documents;
 }
 
-function resource_gs_access($id) {
+function resource_search_access($id) {
   global $DB;
 
   try {
@@ -68,7 +68,7 @@ function resource_gs_access($id) {
     $cm = get_coursemodule_from_instance('resource', $resource->id, $resource->course, false);
     $course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
   } catch (dml_missing_record_exception $ex) {
-    return GS_ACCESS_DELETED;
+    return SEARCH_ACCESS_DELETED;
   }
   try {
     require_course_login($course, true, $cm, true, true);

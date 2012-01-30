@@ -8,7 +8,7 @@
 
 //based on /mod/glossary/showentry?eid=NNN
 
-function glossary_gs_iterator($from = 0) {
+function glossary_search_iterator($from = 0) {
   global $DB;
 
   $sql = "SELECT id, timemodified AS modified FROM {glossary_entries} WHERE timemodified > ? ORDER BY timemodified ASC";
@@ -16,7 +16,7 @@ function glossary_gs_iterator($from = 0) {
   return $DB->get_recordset_sql($sql, array($from));
 }
 
-function glossary_gs_get_documents($id) {
+function glossary_search_get_documents($id) {
   global $DB;
 
   $documents = array();
@@ -33,7 +33,7 @@ function glossary_gs_get_documents($id) {
     var_dump($context);
    */
 
-  $document = new gs_document();
+  $document = new search_document();
   $document->set_id($glossary->id);
   $document->set_user($user);
   $document->set_created($glossary->timecreated);
@@ -43,7 +43,7 @@ function glossary_gs_get_documents($id) {
   //format text from whatever format it was stored in to HTML
   $document->set_content(format_text($glossary->definition, $glossary->definitionformat,
           array('nocache' => true, 'para' => false)));
-  $document->set_type(GS_TYPE_HTML);
+  $document->set_type(SEARCH_TYPE_HTML);
   $document->set_contextlink('/mod/glossary/showentry?eid=' . $glossary->id);
   $document->set_module('glossary');
   $documents[] = $document;
@@ -59,7 +59,7 @@ function glossary_gs_get_documents($id) {
 
       $document = clone $document;
       $document->set_directlink($url);
-      $document->set_type(GS_TYPE_FILE);
+      $document->set_type(SEARCH_TYPE_FILE);
       $document->set_filepath($path);
       $document->set_mime($mimetype);
       $documents[] = $document;
@@ -68,7 +68,7 @@ function glossary_gs_get_documents($id) {
   return $documents;
 }
 
-function glossary_gs_access($id) {
+function glossary_search_access($id) {
   global $DB;
 
   try {
@@ -77,12 +77,12 @@ function glossary_gs_access($id) {
     $cm = get_coursemodule_from_instance('glossary', $glossary->id, 0, false,MUST_EXIST);
     $course = $DB->get_record('course', array('id' => $cm->course), '*', MUST_EXIST);
   } catch (dml_missing_record_exception $ex) {
-    return GS_ACCESS_DELETED;
+    return SEARCH_ACCESS_DELETED;
   }
   try {
     require_course_login($course, true, $cm, true, true);
   } catch (require_login_exception $ex) {
-    return GS_ACCESS_DENIED;
+    return SEARCH_ACCESS_DENIED;
   }
   $entry->glossaryname = $glossary->name;
   $entry->cmid = $cm->id;
@@ -91,17 +91,17 @@ function glossary_gs_access($id) {
   $modinfo = get_fast_modinfo($course);
   // make sure the entry is visible
   if (empty($modinfo->cms[$entry->cmid]->uservisible)) {
-    return GS_ACCESS_DENIED;
+    return SEARCH_ACCESS_DENIED;
   }
 
   // make sure the entry is approved (or approvable by current user)
   if (!$entry->approved and ($USER->id != $entry->userid)) {
     $context = get_context_instance(CONTEXT_MODULE, $entry->cmid);
     if (!has_capability('mod/glossary:approve', $context)) {
-      return GS_ACCESS_DENIED;
+      return SEARCH_ACCESS_DENIED;
     }
   }
-  return GS_ACCESS_GRANTED;
+  return SEARCH_ACCESS_GRANTED;
 }
 
 function glossary_get_full($id) {

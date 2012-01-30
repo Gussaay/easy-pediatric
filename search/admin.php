@@ -12,7 +12,7 @@ require_once($CFG->dirroot . '/search/lib.php');
 
 admin_externalpage_setup('globalsearch');
 
-class gs_admin_form extends moodleform {
+class search_admin_form extends moodleform {
 
   function definition() {
 
@@ -22,6 +22,8 @@ class gs_admin_form extends moodleform {
     $objs[] = $mform->createElement('submit', 'reset', 'Clear index');
     $objs[] = $mform->createElement('submit', 'index', 'Run indexer');
     $mform->addElement('group', 'controlgroup', '', $objs, ' ', false);
+    
+    //$mform->addElement('hidden','XDEBUG_PROFILE');
   }
 
 }
@@ -29,19 +31,19 @@ class gs_admin_form extends moodleform {
 //$confirm = optional_param('confirm', 0, PARAM_BOOL);
 require_capability('moodle/site:config', get_context_instance(CONTEXT_SYSTEM));
 
-$gs_admin_form = new gs_admin_form();
-if ($data = $gs_admin_form->get_data()) {
+$search_admin_form = new search_admin_form();
+if ($data = $search_admin_form->get_data()) {
   if (!empty($data->index)) {
-    gs_index();
+    search_index();
   }
   if (!empty($data->optimize)) {
-    gs_optimize_index();
+    search_optimize_index();
   }
   if (!empty($data->reset)) {
-    gs_reset_index();
+    search_reset_index();
   }
 }
-$index = gs_get_index();
+$index = search_get_index();
 
 $table = new html_table();
 $table->id = 'gs-control-panel';
@@ -52,16 +54,17 @@ $table->colclasses = array(
   'displayname', 'lastrun', 'timetaken'
 );
 
-$supported = gs_get_iterators();
-$config = gs_get_config(array_keys($supported));
+$supported = search_get_iterators();
+$config = search_get_config(array_keys($supported));
 
 foreach ($supported as $name => $mod) {
   $cname = new html_table_cell($name);
   $clastrun = new html_table_cell($config[$name]->lastrun);
-  $ctimetaken = new html_table_cell($config[$name]->timetaken . ' , ' . $config[$name]->docsprocessed . ' , ' . $config[$name]->recordsprocessed . ' , ' . $config[$name]->docsignored);
+  $ctimetaken = new html_table_cell($config[$name]->indexingend - $config[$name]->indexingstart . ' , ' . $config[$name]->docsprocessed . ' , ' . $config[$name]->recordsprocessed . ' , ' . $config[$name]->docsignored);
   $row = new html_table_row(array($cname, $clastrun, $ctimetaken));
   $table->data[] = $row;
 }
+
 
 echo $OUTPUT->header();
 echo $OUTPUT->heading('Index statistics');
@@ -83,7 +86,7 @@ echo html_writer::table($table);
 //echo $output->plugins_control_panel($pluginman->get_plugins());
 echo $OUTPUT->box_end();
 echo $OUTPUT->container_start();
-echo $gs_admin_form->display();
+echo $search_admin_form->display();
 echo $OUTPUT->container_end();
 
 echo $OUTPUT->footer();

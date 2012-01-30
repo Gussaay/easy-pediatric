@@ -7,7 +7,7 @@
 <?php
 
 //mdl_forum_discussions
-function forum_gs_iterator($from = 0) {
+function forum_search_iterator($from = 0) {
   global $DB;
 
   $sql = "SELECT id, modified FROM {forum_posts} WHERE modified > ? ORDER BY modified ASC";
@@ -15,7 +15,7 @@ function forum_gs_iterator($from = 0) {
   return $DB->get_recordset_sql($sql, array($from));
 }
 
-function forum_gs_get_documents($postid) {
+function forum_search_get_documents($postid) {
   global $CFG, $DB;
 
   //return array of indexable documents: post and attachment
@@ -28,7 +28,7 @@ function forum_gs_get_documents($postid) {
 
   $user = $DB->get_record('user', array('id' => $post->userid));
 
-  $document = new gs_document();
+  $document = new search_document();
   $document->set_id($post->id);
   $document->set_user($user);
   $document->set_created($post->created);
@@ -37,7 +37,7 @@ function forum_gs_get_documents($postid) {
   $document->set_courseid($post->course);
   //format text from whatever format it was stored in to HTML
   $document->set_content(format_text($post->message, $post->messageformat, array('nocache' => true, 'para' => false)));
-  $document->set_type(GS_TYPE_HTML);
+  $document->set_type(SEARCH_TYPE_HTML);
   $document->set_contextlink('/mod/forum/discuss.php?d=' . $post->discussion . '#p' . $post->id);
   $document->set_module('forum');
   $documents[] = $document;
@@ -55,7 +55,7 @@ function forum_gs_get_documents($postid) {
 
     $document = clone $document;
     $document->set_directlink($url);
-    $document->set_type(GS_TYPE_FILE);
+    $document->set_type(SEARCH_TYPE_FILE);
     $document->set_filepath($path);
     $document->set_mime($file->get_mimetype());
     $documents[] = $document;
@@ -65,9 +65,9 @@ function forum_gs_get_documents($postid) {
 
 /**
  * Is document set $id accessible for current user?
- * @param integer $id as returned by gs_forum_iterator()
+ * @param integer $id as returned by search_forum_iterator()
  */
-function forum_gs_access($id) {
+function forum_search_access($id) {
   global $DB, $USER;
 
   try {
@@ -77,29 +77,29 @@ function forum_gs_access($id) {
     $course = $DB->get_record('course', array('id' => $forum->course), '*', MUST_EXIST);
     $cm = get_coursemodule_from_instance('forum', $forum->id, $course->id, false, MUST_EXIST);
   } catch (dml_missing_record_exception $ex) {
-    return GS_ACCESS_DELETED;
+    return SEARCH_ACCESS_DELETED;
   }
   $context = get_context_instance(CONTEXT_MODULE, $cm->id);
 
 // Make sure groups allow this user to see the item they're rating
   if ($discussion->groupid > 0 and $groupmode = groups_get_activity_groupmode($cm, $course)) {   // Groups are being used
     if (!groups_group_exists($discussion->groupid)) { // Can't find group
-      return GS_ACCESS_DENIED;
+      return SEARCH_ACCESS_DENIED;
     }
 
     if (!groups_is_member($discussion->groupid) and !has_capability('moodle/site:accessallgroups', $context)) {
       // do not allow viewing of posts from other groups when in SEPARATEGROUPS or VISIBLEGROUPS
-      return GS_ACCESS_DENIED;
+      return SEARCH_ACCESS_DENIED;
     }
   }
 
   // perform some final capability checks
   if (!forum_user_can_see_post($forum, $discussion, $post, $USER, $cm)) {
-    return GS_ACCESS_DENIED;
+    return SEARCH_ACCESS_DENIED;
   }
 
 //forum_user_can_view_post($post, $course, $cm, $forum, $discussion)  
-  return GS_ACCESS_GRANTED;
+  return SEARCH_ACCESS_GRANTED;
 }
 
 function forum_get_post_full2($postid) {

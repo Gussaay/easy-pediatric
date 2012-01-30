@@ -14,11 +14,11 @@ require_once($CFG->dirroot . '/search/lib.php');
 require_login();
 $PAGE->set_context(get_system_context());
 
-gs_reset(); 
+search_reset(); 
 @set_time_limit(0);
 echo '<pre>';
 
-gs_index_check();
-gs_index();
+search_index_check();
+search_index();
 
 
