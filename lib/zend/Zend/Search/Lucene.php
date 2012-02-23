@@ -935,11 +935,11 @@ class Zend_Search_Lucene implements Zend_Search_Lucene_Interface
         $hits   = array();
         $scores = array();
         $ids    = array();
-
+        $GLOBALS['gstimes'][0] = microtime(true);
         $query = $query->rewrite($this)->optimize($this);
-
+        $GLOBALS['gstimes'][1] = microtime(true);
         $query->execute($this);
-
+        $GLOBALS['gstimes'][2] = microtime(true);
         $topScore = 0;
 
         /** Zend_Search_Lucene_Search_QueryHit */
@@ -965,7 +965,7 @@ class Zend_Search_Lucene implements Zend_Search_Lucene_Interface
                 break;
             }
         }
-
+        $GLOBALS['gstimes'][3] = microtime(true);
         if (count($hits) == 0) {
             // skip sorting, which may cause a error on empty index
             return array();
@@ -1069,7 +1069,7 @@ class Zend_Search_Lucene implements Zend_Search_Lucene_Interface
             // Do sort
             call_user_func_array('array_multisort', $sortArgs);
         }
-
+        $GLOBALS['gstimes'][4] = microtime(true);
         return $hits;
     }
 

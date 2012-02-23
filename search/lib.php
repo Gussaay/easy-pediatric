@@ -201,7 +201,7 @@ function search_index($initial=true) {
     if($initial) {
         //100,10; 10,100; 30,30
         //10,10
-        $index->setMaxBufferedDocs(10);
+        $index->setMaxBufferedDocs(50);
         $index->setMergeFactor(10);
     }
     $iterators = search_get_iterators();
