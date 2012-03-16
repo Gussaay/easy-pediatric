@@ -196,17 +196,20 @@ function search_get_index() {
  * Index all documents.
  */
 function search_index($initial=true) {
-    set_time_limit(57600);
+    set_time_limit(576000);
     $index = search_get_index();
+    $maxBufferedDocs = 300;
+    $mergeFactor = 400;
     if($initial) {
         //100,10; 10,100; 30,30
         //10,10
-        $index->setMaxBufferedDocs(50);
-        $index->setMergeFactor(10);
+        $index->setMaxBufferedDocs($maxBufferedDocs);
+        $index->setMergeFactor($mergeFactor);
     }
     $iterators = search_get_iterators();
     foreach ($iterators as $name => $iterator) {
         mtrace('Processing module ' . $iterator->module, '<br />');
+        if($iterator->module == 'label') $log = fopen("/tmp/gs.perf.$maxBufferedDocs.$mergeFactor.log",'w');
         $indexingstart = time();
         $iterfunction = $iterator->iterator;
         $getdocsfunction = $iterator->documents;
@@ -244,7 +247,14 @@ function search_index($initial=true) {
                 }
             }
   	    $timetaken=microtime(true) - $timestart;
+            if($iterator->module == 'label') fwrite($log,"$timetaken\n");
 	    mtrace("Time $norecords: $timetaken", '<br/>');
+        }
+        if($iterator->module == 'label') {
+            $log2 = fopen("/tmp/gs.env.$maxBufferedDocs.$mergeFactor.log",'w');
+            fwrite($log2,"memory peak: ". memory_get_peak_usage()."\n");
+            fclose($log2);
+            fclose($log);
         }
         $recordset->close();
         if ($norecords > 0) {
