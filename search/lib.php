@@ -198,8 +198,8 @@ function search_get_index() {
 function search_index($initial=true) {
     set_time_limit(576000);
     $index = search_get_index();
-    $maxBufferedDocs = 300;
-    $mergeFactor = 400;
+    $maxBufferedDocs = 100;
+    $mergeFactor = 10;
     if($initial) {
         //100,10; 10,100; 30,30
         //10,10
@@ -207,9 +207,13 @@ function search_index($initial=true) {
         $index->setMergeFactor($mergeFactor);
     }
     $iterators = search_get_iterators();
+    
     foreach ($iterators as $name => $iterator) {
         mtrace('Processing module ' . $iterator->module, '<br />');
-        if($iterator->module == 'label') $log = fopen("/tmp/gs.perf.$maxBufferedDocs.$mergeFactor.log",'w');
+        if($iterator->module == 'label') { 
+            $log = fopen("/tmp/gs.perf.$maxBufferedDocs.$mergeFactor.log",'w');
+            $log2 = fopen("/tmp/gs.env.$maxBufferedDocs.$mergeFactor.log",'w');
+        }
         $indexingstart = time();
         $iterfunction = $iterator->iterator;
         $getdocsfunction = $iterator->documents;
@@ -221,7 +225,8 @@ function search_index($initial=true) {
         $nodocumentsignored = 0;
         foreach ($recordset as $record) {
             mtrace("$name,{$record->id}", '<br/>');
-            mtrace("Memory usage:" . memory_get_usage(), '<br/>');
+            //mtrace("Memory usage:" . memory_get_usage(), '<br/>');
+            fwrite($log2,memory_get_usage() . "\n");
             ++$norecords;
             //var_dump($record);
             $timestart=microtime(true);
@@ -251,7 +256,7 @@ function search_index($initial=true) {
 	    mtrace("Time $norecords: $timetaken", '<br/>');
         }
         if($iterator->module == 'label') {
-            $log2 = fopen("/tmp/gs.env.$maxBufferedDocs.$mergeFactor.log",'w');
+            //$log2 = fopen("/tmp/gs.env.$maxBufferedDocs.$mergeFactor.log",'w');
             fwrite($log2,"memory peak: ". memory_get_peak_usage()."\n");
             fclose($log2);
             fclose($log);
