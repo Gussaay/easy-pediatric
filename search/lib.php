@@ -27,6 +27,10 @@ define('SEARCH_ACCESS_DENIED', 0);
 define('SEARCH_ACCESS_GRANTED', 1);
 define('SEARCH_ACCESS_DELETED', 2);
 
+define('SEARCH_MAX_BUFFERED_DOCS', 100);
+define('SEARCH_MAX_MERGE_FACTOR', 10);
+define('SEARCH_MAX_MERGE_DOCS', 10000);
+
 class search_exception extends moodle_exception {
 
     function __construct($hint, $debuginfo=null) {
@@ -122,7 +126,10 @@ function search_reset_index() {
  * Merge separate index segments into one.
  */
 function search_optimize_index() {
+    set_time_limit(576000);
+    raise_memory_limit('9000M');
     $index = search_get_index();
+    $index->setMaxMergeDocs(1000);
     $index->optimize();
 }
 
@@ -196,24 +203,18 @@ function search_get_index() {
  * Index all documents.
  */
 function search_index($initial=true) {
+    mtrace("Memory usage:" . memory_get_usage(), '<br/>');
     set_time_limit(576000);
     $index = search_get_index();
-    $maxBufferedDocs = 100;
-    $mergeFactor = 10;
-    if($initial) {
-        //100,10; 10,100; 30,30
-        //10,10
-        $index->setMaxBufferedDocs($maxBufferedDocs);
-        $index->setMergeFactor($mergeFactor);
-    }
-    $iterators = search_get_iterators();
+
+    $index->setMaxBufferedDocs(SEARCH_MAX_BUFFERED_DOCS);
+    $index->setMergeFactor(SEARCH_MAX_MERGE_FACTOR);
+    $index->setMaxMergeDocs(SEARCH_MAX_MERGE_DOCS);
     
+    $iterators = search_get_iterators();
+mtrace("Memory usage:" . memory_get_usage(), '<br/>');
     foreach ($iterators as $name => $iterator) {
         mtrace('Processing module ' . $iterator->module, '<br />');
-        if($iterator->module == 'label') { 
-            $log = fopen("/tmp/gs.perf.$maxBufferedDocs.$mergeFactor.log",'w');
-            $log2 = fopen("/tmp/gs.env.$maxBufferedDocs.$mergeFactor.log",'w');
-        }
         $indexingstart = time();
         $iterfunction = $iterator->iterator;
         $getdocsfunction = $iterator->documents;
@@ -225,18 +226,19 @@ function search_index($initial=true) {
         $nodocumentsignored = 0;
         foreach ($recordset as $record) {
             mtrace("$name,{$record->id}", '<br/>');
-            //mtrace("Memory usage:" . memory_get_usage(), '<br/>');
-            fwrite($log2,memory_get_usage() . "\n");
+            mtrace("Memory usage:" . memory_get_usage(), '<br/>');
             ++$norecords;
             //var_dump($record);
-            $timestart=microtime(true);
+            $timestart = microtime(true);
             $documents = $getdocsfunction($record->id);
             //find out if it's not an update - delete whole document set if so
             search_remove_set($name, $record->id);
             foreach ($documents as $document) {
                 switch ($document->get_type()) {
                     case SEARCH_TYPE_HTML:
+                        mtrace("Memory usage: (new html doc)" . memory_get_usage(), '<br/>');
                         $lucenedoc = new search_lucene_html($document);
+                        mtrace("Memory usage: (new html doc created)" . memory_get_usage(), '<br/>');
                         break;
                     case SEARCH_TYPE_FILE:
                         $lucenedoc = search_document_for_mime($document);
@@ -246,20 +248,14 @@ function search_index($initial=true) {
                 }
                 if ($lucenedoc) {
                     $index->addDocument($lucenedoc);
+                    mtrace("Memory usage: (doc added)" . memory_get_usage(), '<br/>');
                     ++$nodocuments;
                 } else {
                     ++$nodocumentsignored;
                 }
             }
-  	    $timetaken=microtime(true) - $timestart;
-            if($iterator->module == 'label') fwrite($log,"$timetaken\n");
-	    mtrace("Time $norecords: $timetaken", '<br/>');
-        }
-        if($iterator->module == 'label') {
-            //$log2 = fopen("/tmp/gs.env.$maxBufferedDocs.$mergeFactor.log",'w');
-            fwrite($log2,"memory peak: ". memory_get_peak_usage()."\n");
-            fclose($log2);
-            fclose($log);
+            $timetaken = microtime(true) - $timestart;
+            mtrace("Time $norecords: $timetaken", '<br/>');
         }
         $recordset->close();
         if ($norecords > 0) {
@@ -292,7 +288,9 @@ function search_remove_set($module, $id) {
     //mtrace($q, '<br/>');
     foreach ($ids as $id) {
         mtrace("Removing: $id", '<br/>');
+        mtrace("Memory usage (before delete):" . memory_get_usage(), '<br/>');
         $index->delete($id);
+        mtrace("Memory usage (after delete):" . memory_get_usage(), '<br/>');
     }
 }
 
