@@ -45,26 +45,42 @@ $timestop = microtime(true);
 mtrace("Query time: " . ($timestop - $timestart), '<br />');
 mtrace("Hits: " . count($hits), '<br />');
 for ($i = 0; $i < count($gstimes) - 1; $i++) {
-    mtrace("gstimes #$i:" . ($gstimes[$i + 1] - $gstimes[$i]),'<br/>');
+    mtrace("gstimes #$i:" . ($gstimes[$i + 1] - $gstimes[$i]), '<br/>');
 }
-mtrace("Memory allocated: ".memory_get_usage(), '<br />');
+mtrace("Memory allocated: " . memory_get_usage(), '<br />');
 
 //filter out non-accessible records (security)
+//but only until we get SEARCH_MAX_RESULTS most relevant results
 $countbefore = count($hits);
+$resultsnumber = 0;
+$deniednumber = 0;
 foreach ($hits as $k => $hit) {
-    
     $func = $hit->module . '_search_access';
     $result = $func($hit->setid);
     switch ($result) {
         case SEARCH_ACCESS_DELETED:
             $index->delete($hit->id);
-        case SEARCH_ACCESS_DENIED:
             unset($hits[$k]);
             break;
+        case SEARCH_ACCESS_DENIED:
+            unset($hits[$k]);
+            $deniednumber++;
+            //TODO - ack if number of denied is too high
+            break;
+        default:
+            $resultsnumber++;
+            break;
+    }
+
+    if ($resultsnumber == SEARCH_MAX_RESULTS) {
+        $hits = array_slice($hits, 0, SEARCH_MAX_RESULTS, true);
+        break;
     }
 }
 $countafter = count($hits);
-mtrace($countbefore - $countafter . ' hits removed as non-accessible for current user', '<br />');
+
+mtrace($deniednumber . ' hits removed as non-accessible for current user', '<br />');
+mtrace($countbefore - $countafter . ' hits removed in total', '<br />');
 //@TODO - cache search results, for now just take up to 100 best hits
 //
 //display search results
@@ -72,9 +88,3 @@ foreach ($hits as $hit) {
     include('_result.php');
 }
 
-//display pager
-$baseurl = new moodle_url('search.php');
-$count = count($hits);
-$page = 0;
-$perpage = 20;
-echo $OUTPUT->paging_bar($count, $page, $perpage, $baseurl);

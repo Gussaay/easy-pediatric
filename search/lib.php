@@ -31,6 +31,9 @@ define('SEARCH_MAX_BUFFERED_DOCS', 100);
 define('SEARCH_MAX_MERGE_FACTOR', 10);
 define('SEARCH_MAX_MERGE_DOCS', 10000);
 
+define('SEARCH_MAX_RESULTS', 100);
+
+
 class search_exception extends moodle_exception {
 
     function __construct($hint, $debuginfo=null) {
