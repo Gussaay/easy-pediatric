@@ -55,6 +55,8 @@ $countbefore = count($hits);
 $resultsnumber = 0;
 $deniednumber = 0;
 foreach ($hits as $k => $hit) {
+    //first do the generic check - if the course is accessible for current user
+    
     $func = $hit->module . '_search_access';
     $result = $func($hit->setid);
     switch ($result) {

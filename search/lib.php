@@ -33,10 +33,9 @@ define('SEARCH_MAX_MERGE_DOCS', 10000);
 
 define('SEARCH_MAX_RESULTS', 100);
 
-
 class search_exception extends moodle_exception {
 
-    function __construct($hint, $debuginfo=null) {
+    function __construct($hint, $debuginfo = null) {
         parent::__construct($hint, 'debug', '', $hint, $debuginfo);
     }
 
@@ -50,8 +49,8 @@ function search_fill_lucene_fields($document) {
     $document->addField(Zend_Search_Lucene_Field::Keyword('courseid', $document->doc->get_courseid()));
     $document->addField(Zend_Search_Lucene_Field::Keyword('setid', $document->doc->get_id()));
     $document->addField(Zend_Search_Lucene_Field::Keyword('module', $document->doc->get_module()));
-    $document->addField(Zend_Search_Lucene_Field::Keyword('directlink', $document->doc->get_directlink()));
-    $document->addField(Zend_Search_Lucene_Field::Keyword('contextlink', $document->doc->get_contextlink()));
+    $document->addField(Zend_Search_Lucene_Field::unIndexed('directlink', $document->doc->get_directlink()));
+    $document->addField(Zend_Search_Lucene_Field::unIndexed('contextlink', $document->doc->get_contextlink()));
     $document->addField(Zend_Search_Lucene_Field::Keyword('fullsetid',
                     $document->doc->get_module() . ':' . $document->doc->get_id()));
     if ($document->doc->get_type() !== SEARCH_TYPE_FILE) {
@@ -205,7 +204,7 @@ function search_get_index() {
 /**
  * Index all documents.
  */
-function search_index($initial=true) {
+function search_index($initial = true) {
     mtrace("Memory usage:" . memory_get_usage(), '<br/>');
     set_time_limit(576000);
     $index = search_get_index();
@@ -213,9 +212,9 @@ function search_index($initial=true) {
     $index->setMaxBufferedDocs(SEARCH_MAX_BUFFERED_DOCS);
     $index->setMergeFactor(SEARCH_MAX_MERGE_FACTOR);
     $index->setMaxMergeDocs(SEARCH_MAX_MERGE_DOCS);
-    
+
     $iterators = search_get_iterators();
-mtrace("Memory usage:" . memory_get_usage(), '<br/>');
+    mtrace("Memory usage:" . memory_get_usage(), '<br/>');
     foreach ($iterators as $name => $iterator) {
         mtrace('Processing module ' . $iterator->module, '<br />');
         $indexingstart = time();
@@ -297,11 +296,28 @@ function search_remove_set($module, $id) {
     }
 }
 
+/**
+ * Check if user can access $courseid. Result will be cached.
+ * 
+ * @param type $courseid
+ * @return string 
+ */
 function search_can_access_course($courseid) {
+    global $DB;
+
     static $cache = array();
 
     if (!isset($cache[$courseid])) {
-        $cache[$courseid] = can_access_course($course);
+        $course = $DB->get_record('course', array('id' => $courseid));
+        if (!$course) {
+            $cache[$courseid] = SEARCH_ACCESS_DELETED;
+        } else {
+            if (can_access_course($course)) {
+                $cache[$courseid] = SEARCH_ACCESS_GRANTED;
+            } else {
+                $cache[$courseid] = SEARCH_ACCESS_DELETED;
+            }
+        }
     }
 
     return $cache[$courseid];
@@ -309,8 +325,22 @@ function search_can_access_course($courseid) {
 
 /**
  * Check standard security for hits that do have $cm.
+ * Also handle deletes.
  * @param type $cm 
  */
-function search_access($cm) {
-    
+function search_access_activity($cm) {
+
+    if (!$label = $DB->get_record("label", array("id" => $id))) {
+        return SEARCH_ACCESS_DELETED;
+    }
+
+    if (!$course = $DB->get_record("course", array("id" => $label->course))) {
+        return SEARCH_ACCESS_DELETED;
+    }
+
+    if (!$cm = get_coursemodule_from_instance("label", $label->id, $course->id)) {
+        return SEARCH_ACCESS_DELETED;
+    }
+
+    return SEARCH_ACCESS_GRANTED;
 }
