@@ -789,6 +789,10 @@ function forum_cron() {
     }
 
     $timenow = time();
+    if (!isset($CFG->digestmailtime)) {
+        set_config('digestmailtime', 17);
+    }
+    
     $digesttime = usergetmidnight($timenow, $sitetimezone) + ($CFG->digestmailtime * 3600);
 
     // Delete any really old ones (normally there shouldn't be any)
